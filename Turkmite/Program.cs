@@ -26,18 +26,9 @@ namespace TurkMite
             {
             }
 
-            protected override Vec3b GetNextColorAndUpdateDirection(Vec3b currentColor)
+            protected override (Vec3b newColor, int deltaDirection) GetNextColorAndUpdateDirection(Vec3b currentColor)
             {
-                if (currentColor == black)
-                {
-                    direction++;
-                    return white;
-                }
-                else
-                {
-                    direction--;
-                    return black;
-                }
+                return (currentColor == black) ? (white, 1) : (black, -1);
             }
         }
 
@@ -47,7 +38,7 @@ namespace TurkMite
             private Mat.Indexer<Vec3b> indexer;
             private int x;
             private int y;
-            protected int direction;  // 0 up, 1 right, 2 down, 3 left
+            private int direction;  // 0 up, 1 right, 2 down, 3 left
             public TurkmiteBase(Mat image)
             {
                 Image = image;
@@ -61,12 +52,15 @@ namespace TurkMite
 
             public void Step()
             {
-                indexer[y, x] = GetNextColorAndUpdateDirection(indexer[y, x]);
-                PerformMove();
+                int deltaDirection;
+                (indexer[y, x], deltaDirection) =
+                    GetNextColorAndUpdateDirection(indexer[y, x]);
+                PerformMove(deltaDirection);
             }
 
-            private void PerformMove()
+            private void PerformMove(int deltaDirection)
             {
+                direction += deltaDirection;
                 direction = (direction + 4) % 4;
                 x += delta[direction].x;
                 y += delta[direction].y;
@@ -74,7 +68,7 @@ namespace TurkMite
                 y = Math.Max(0, Math.Min(Image.Rows, y));
             }
 
-            protected abstract Vec3b GetNextColorAndUpdateDirection(Vec3b currentColor);
+            protected abstract (Vec3b newColor, int deltaDirection) GetNextColorAndUpdateDirection(Vec3b currentColor);
         }
     }
 }
