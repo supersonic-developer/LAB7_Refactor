@@ -4,9 +4,6 @@ namespace TurkMite
 {
     public class StateTurkMite : TurkmiteBase
     {
-        readonly public Vec3b black = new Vec3b(0, 0, 0);
-        readonly public Vec3b white = new Vec3b(255, 255, 255);
-        readonly public Vec3b red = new Vec3b(0, 0, 255);
         readonly public AState aState;
         readonly public BState bState;
         readonly public CState cState;
@@ -32,29 +29,30 @@ namespace TurkMite
             currentState = aState;
         }
 
-        public override void Step()
-        {
-            int deltaDirection;
-            bool isStep;
-            (indexer[y, x], deltaDirection, isStep) = currentState.GetColorAndDirectionAndStep(indexer[y, x]);
-            if (isStep)
-                PerformMove(deltaDirection);
-        }
-
         protected override (Vec3b newColor, int deltaDirection) GetNextColorAndUpdateDirection(Vec3b currentColor)
         {
-            return (this.black, 0);
+            return currentState.GetColorAndDirection(currentColor);
         }
     }
 
+    /*
+     * Minden fordulás egyben lépés is?
+     * Az Enter esemény csak +1 tagváltozóval oldható meg?
+     * Miért kellene külön Red, White, Black metódus?
+     * C állapotban az belépés hatására történő lépés is egy lépésnek számít?
+     * Hány lépésig kéne futtatni ezt a turkmitet?
+     */
     public abstract class StateBase
     {
         protected readonly StateTurkMite turkmite;
+        readonly protected Vec3b black = new Vec3b(0, 0, 0);
+        readonly protected Vec3b white = new Vec3b(255, 255, 255);
+        readonly protected Vec3b red = new Vec3b(0, 0, 255);
 
         public StateBase(StateTurkMite turkmite) { this.turkmite = turkmite; }
 
         public virtual void Enter() { return; }
-        public virtual (Vec3b newColor, int deltaDirection, bool isStep) GetColorAndDirectionAndStep(Vec3b currentColor) { return (currentColor, 0, true); }
+        public virtual (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor) { return (currentColor, 0); }
         
     }
 
@@ -69,19 +67,19 @@ namespace TurkMite
             concernedBlackPixels = 0;
         }
 
-        public override (Vec3b newColor, int deltaDirection, bool isStep) GetColorAndDirectionAndStep(Vec3b currentColor)
+        public override (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor)
         {
-            if (currentColor != turkmite.black)
+            if (currentColor != black)
             {
-                return base.GetColorAndDirectionAndStep(currentColor);
+                return base.GetColorAndDirection(currentColor);
             }
             concernedBlackPixels++;
             if (concernedBlackPixels == 3)
             {
                 turkmite.CurrentState = turkmite.bState;
-                return (turkmite.white, -2, false);
+                return (white, -2);
             }
-            return (turkmite.black, 0, true);
+            return (black, 0);
         }
 
 
@@ -91,20 +89,20 @@ namespace TurkMite
     {
         public BState(StateTurkMite turkmite) : base(turkmite) { }
 
-        public override (Vec3b newColor, int deltaDirection, bool isStep) GetColorAndDirectionAndStep(Vec3b currentColor)
+        public override (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor)
         {
-            if (currentColor == turkmite.black)
+            if (currentColor == black)
             {
-                return (turkmite.white, -1, true);
+                return (white, -1);
             }
-            else if (currentColor == turkmite.white)
+            else if (currentColor == white)
             {
-                return (turkmite.red, 1, true);
+                return (red, 1);
             }
             else
             {
                 turkmite.CurrentState = turkmite.cState;
-                return (turkmite.black, 0, true);
+                return (black, 0);
             }
         }
     }
@@ -121,31 +119,31 @@ namespace TurkMite
             isEnter = true;
         }
 
-        public override (Vec3b newColor, int deltaDirection, bool isStep) GetColorAndDirectionAndStep(Vec3b currentColor)
+        public override (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor)
         {
+            steps++;
             if (isEnter)
             {
                 isEnter = false;
-                return (turkmite.red, 0, true);
+                return (red, 0);
             }
             else 
             {
-                steps++;
                 if (steps == 5)
                 {
-                    if (currentColor == turkmite.red)
+                    if (currentColor == red)
                     { turkmite.CurrentState = turkmite.bState; }
                     else
                     { turkmite.CurrentState = turkmite.aState; }
                 }
-                if (currentColor == turkmite.black)
-                { return (turkmite.white, -1, true); }
-                else if (currentColor == turkmite.white)
-                { return (turkmite.red, 1, true); }
+                if (currentColor == black)
+                { return (white, -1); }
+                else if (currentColor == white)
+                { return (red, 1); }
                 else
                 {
                     turkmite.CurrentState = turkmite.cState;
-                    return (turkmite.black, -1, false);
+                    return (black, -1);
                 }
             }
         }

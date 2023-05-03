@@ -42,10 +42,10 @@ namespace TurkMite
     public abstract class TurkmiteBase
     {
         public Mat Image { get; }
-        protected Mat.Indexer<Vec3b> indexer;
-        protected int x;
-        protected int y;
-        protected int direction;  // 0 up, 1 right, 2 down, 3 left
+        private Mat.Indexer<Vec3b> indexer;
+        private int x;
+        private int y;
+        private int direction;  // 0 up, 1 right, 2 down, 3 left
         public TurkmiteBase(Mat image)
         {
             Image = image;
@@ -58,14 +58,14 @@ namespace TurkMite
         readonly private (int x, int y)[] delta = new (int x, int y)[] { (0, -1), (1, 0), (0, 1), (-1, 0) };
         public abstract int PreferredIterationCount { get; }
 
-        public virtual void Step()
+        public void Step()
         {
             int deltaDirection;
             (indexer[y, x], deltaDirection) = GetNextColorAndUpdateDirection(indexer[y, x]);
             PerformMove(deltaDirection);
         }
 
-        public void PerformMove(int deltaDirection)
+        private void PerformMove(int deltaDirection)
         {
             direction += deltaDirection;
             direction = (direction + 4) % 4;
