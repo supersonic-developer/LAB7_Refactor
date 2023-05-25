@@ -1,4 +1,5 @@
 ﻿using OpenCvSharp;
+using System;
 
 namespace TurkMite
 {
@@ -14,7 +15,7 @@ namespace TurkMite
         public StateBase CurrentState 
         {
             get { return currentState; }
-            set 
+            private set 
             { 
                 currentState = value;
                 currentState.Enter();
@@ -23,9 +24,10 @@ namespace TurkMite
 
         public StateTurkMite(Mat image) : base(image) 
         {
-            aState = new AState(this);
-            bState = new BState(this);
-            cState = new CState(this);
+            Action<StateBase> a = (StateBase s) => { CurrentState = s; };
+            aState = new AState(this, a);
+            bState = new BState(this, a);
+            cState = new CState(this, a);
             currentState = aState;
         }
 
@@ -35,31 +37,27 @@ namespace TurkMite
         }
     }
 
-    /*
-     * Minden fordulás egyben lépés is?
-     * Az Enter esemény csak +1 tagváltozóval oldható meg?
-     * Miért kellene külön Red, White, Black metódus?
-     * C állapotban az belépés hatására történő lépés is egy lépésnek számít?
-     * Hány lépésig kéne futtatni ezt a turkmitet?
-     */
     public abstract class StateBase
     {
         protected readonly StateTurkMite turkmite;
         readonly protected Vec3b black = new Vec3b(0, 0, 0);
         readonly protected Vec3b white = new Vec3b(255, 255, 255);
         readonly protected Vec3b red = new Vec3b(0, 0, 255);
-
-        public StateBase(StateTurkMite turkmite) { this.turkmite = turkmite; }
+        protected Action<StateBase> changeState;
+        public StateBase(StateTurkMite turkmite, Action<StateBase> changeState) 
+        { 
+            this.turkmite = turkmite;
+            this.changeState = changeState;
+        }
 
         public virtual void Enter() { return; }
         public virtual (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor) { return (currentColor, 0); }
-        
     }
 
     public class AState : StateBase
     {
         private int concernedBlackPixels = 0;
-        public AState(StateTurkMite turkmite) : base(turkmite) { }
+        public AState(StateTurkMite turkmite, Action<StateBase> changeState) : base(turkmite, changeState) { }
 
         public override void Enter()
         {
@@ -76,18 +74,16 @@ namespace TurkMite
             concernedBlackPixels++;
             if (concernedBlackPixels == 3)
             {
-                turkmite.CurrentState = turkmite.bState;
+                changeState(turkmite.bState);
                 return (white, -2);
             }
             return (black, 0);
         }
-
-
     }
 
     public class BState : StateBase
     {
-        public BState(StateTurkMite turkmite) : base(turkmite) { }
+        public BState(StateTurkMite turkmite, Action<StateBase> changeState) : base(turkmite, changeState) { }
 
         public override (Vec3b newColor, int deltaDirection) GetColorAndDirection(Vec3b currentColor)
         {
@@ -101,7 +97,7 @@ namespace TurkMite
             }
             else
             {
-                turkmite.CurrentState = turkmite.cState;
+                changeState(turkmite.cState);
                 return (black, 0);
             }
         }
@@ -111,7 +107,7 @@ namespace TurkMite
     {
         private int steps = 0;
         private bool isEnter = false;
-        public CState(StateTurkMite turkmite) : base(turkmite) { }
+        public CState(StateTurkMite turkmite, Action<StateBase> changeState) : base(turkmite, changeState) { }
 
         public override void Enter()
         {
@@ -132,9 +128,9 @@ namespace TurkMite
                 if (steps == 5)
                 {
                     if (currentColor == red)
-                    { turkmite.CurrentState = turkmite.bState; }
+                    { changeState(turkmite.bState); }
                     else
-                    { turkmite.CurrentState = turkmite.aState; }
+                    { changeState(turkmite.aState); }
                 }
                 if (currentColor == black)
                 { return (white, -1); }
@@ -142,7 +138,7 @@ namespace TurkMite
                 { return (red, 1); }
                 else
                 {
-                    turkmite.CurrentState = turkmite.cState;
+                    changeState(turkmite.cState);
                     return (black, -1);
                 }
             }
